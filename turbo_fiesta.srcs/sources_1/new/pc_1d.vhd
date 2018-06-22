@@ -48,14 +48,16 @@ begin
   -- Update PC
   pc_proc: process(clk, reset)
   begin
-    if (reset = '1')
+    if (rising_edge(clk))
     then
-      r_PC  <= unsigned((signed(i_PC) + i_dPC) rem max);
-      r_dPC <= i_dPC;
-    elsif (rising_edge(clk))
-    then
-      r_PC  <= unsigned(bound_PC);
-      r_dPC <= mux_dPC;
+      if (reset = '1')
+      then
+        r_PC  <= unsigned((signed(i_PC) + i_dPC) rem max);
+        r_dPC <= i_dPC;
+      else
+        r_PC  <= unsigned(bound_PC);
+        r_dPC <= mux_dPC;
+      end if;
     end if;
   end process pc_proc;
 
