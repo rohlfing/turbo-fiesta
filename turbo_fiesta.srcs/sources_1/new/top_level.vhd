@@ -84,7 +84,7 @@ component alu_ex
            im_addr : out std_logic_vector(15 downto 0));
 end component;
 
-component uart_buff
+component uart_shift
     generic( LOGN : integer := 8;
                 N : integer := 256);
     Port ( clk  : in STD_LOGIC;
@@ -211,7 +211,7 @@ alu_impl: alu_ex
               dy      => s_dy,
               im_addr => s_im_addr);
 
-output_buff: uart_buff
+output_buff: uart_shift
     Port map(clk   => CLK100MHZ,
              w_clk => s_im_clk,
              data  => std_logic_vector(s_resbot(7 downto 0)),

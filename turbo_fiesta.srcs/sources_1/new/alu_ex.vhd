@@ -77,7 +77,6 @@ begin
       if inst = x"22"
       then
         r_strmode <= '0';
-      else
         s_n_push <= "00";
       end if;
     else
@@ -155,14 +154,14 @@ begin
           s_dx     <= "00";
           s_dy     <= "01";
         when x"3f" => -- ?
-          s_n_pop  <= "00"; 
+          s_n_pop  <= "01"; 
           s_n_push <= "00";
           s_redir  <= '1';
           -- TODO ADR randomize this
           s_dx     <= "11";
           s_dy     <= "00";
         when x"5f" => -- _      
-          s_n_pop  <= "00"; 
+          s_n_pop  <= "01"; 
           s_n_push <= "00";
           s_redir  <= '1';
           if (top = x"00000000")
@@ -173,7 +172,7 @@ begin
           end if;
           s_dy     <= "00";
         when x"7c" => -- |      
-          s_n_pop  <= "00"; 
+          s_n_pop  <= "01"; 
           s_n_push <= "00";
           s_redir <= '1';
           s_dx     <= "00";

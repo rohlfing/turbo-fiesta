@@ -52,6 +52,7 @@ uart <= r_uart;
 new_w_index <= w_index + ("0000000"&w_en);
 new_r_index <= r_index + x"01";
 
+-- TODO ADR using ALU output as clock: bad idea
 input_proc: process(w_clk)
 begin
   if (rising_edge(w_clk))
@@ -67,16 +68,20 @@ begin
   then
     if (send = '1')
     then
+      -- Start Bit
       if (bit_count = x"0")
       then
         r_uart <= '0';
+      -- 8 Data bits
       elsif (unsigned(bit_count) < x"9")
       then
         r_uart <= buff(to_integer(r_index))(to_integer(unsigned(bit_count)) - 1);
+      -- 1 Stop bit
       elsif (unsigned(bit_count) = x"9")
       then
         r_uart <= '1';
         r_index <= new_r_index;
+      -- Hold high while inactive
       else
         r_uart <= '1';
       end if;
