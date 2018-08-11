@@ -3,9 +3,15 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity top_level is
-    Port (CLK100MHZ    : in  std_logic;
-          reset        : in  std_logic;
-          uart_rxd_out : out std_logic);
+    -- Wait for 2/3 second to debounce and verify reset
+    generic (cntdwn_max : unsigned(31 downto 0) := x"04000000"; --:= x"0000000A"; --
+             cntdwn_min : unsigned(31 downto 0) := x"00000000");
+    port (CLK100MHZ     : in  std_logic;
+          reset_in      : in  std_logic;
+          uart_rxd_out  : out std_logic;
+          uart_dbg_out  : out std_logic;
+          inst_dbg_out  : out std_logic_vector(7 downto 0);
+          led           : out std_logic_vector(3 downto 0));
 end top_level;
 
 architecture Behavioral of top_level is
@@ -87,14 +93,19 @@ end component;
 component uart_shift
     generic( LOGN : integer := 8;
                 N : integer := 256);
-    Port ( clk  : in STD_LOGIC;
-           w_clk: in std_logic;
-           data : in STD_LOGIC_VECTOR (7 downto 0);
-           w_en : in STD_LOGIC;
-           uart : out STD_LOGIC);
+    Port ( clk   : in STD_LOGIC;
+           w_clk : in STD_LOGIC;
+           data  : in STD_LOGIC_VECTOR (7 downto 0);
+           w_en  : in STD_LOGIC;
+           uart  : out STD_LOGIC);
 end component;
 
 signal s_stall   : std_logic := '0'; 
+signal s_reset   : std_logic := '0';
+signal r_cntdwn  : unsigned(31 downto 0) := x"00000000";
+signal s_cntdwn  : unsigned(31 downto 0);
+
+signal uart_tmp_out : std_logic := '0';
 
 -- Clock Signals
 signal s_pc_clk  : std_logic;
@@ -133,12 +144,45 @@ signal s_resbot  : signed(31 downto 0);
 signal s_dx      : signed(1 downto 0);
 signal s_dy      : signed(1 downto 0);
 signal s_im_addr : std_logic_vector(15 downto 0);
+
 begin
+
+-- UART outputs
+uart_dbg_out <= uart_tmp_out;
+uart_rxd_out <= uart_tmp_out;
+
+-- LED defs
+led(3) <= '0'; -- uart_tmp_out;
+led(2) <= '0';
+led(1) <= '0';
+led(0) <= s_reset;
+
+-- Force instruction memory output to compile (PMOD JB)
+inst_dbg_out <= s_inst;
+
+-- Reset countdown
+s_cntdwn <= r_cntdwn;
+s_reset  <= '0' when s_cntdwn = cntdwn_min else '1';
+reset_cntdwn: process(CLK100MHZ)
+begin
+  if (rising_edge(CLK100MHZ)) then
+    -- Reset timer when button is pressed
+    if (reset_in = '1') then
+      r_cntdwn <= cntdwn_max;
+    -- Count down to debounce reset button
+    elsif (s_cntdwn /= cntdwn_min) then
+      r_cntdwn <= s_cntdwn - to_unsigned(1, 32);
+    -- Hold at min when reset is not asserted
+    else
+      r_cntdwn <= cntdwn_min;
+    end if;
+  end if;
+end process reset_cntdwn;
 
 -- Clock signal generator
 clk_impl: clk_control
   port map(clk      => CLK100MHZ,
-           reset    => reset,
+           reset    => s_reset,
            pc_clk   => s_pc_clk,
            alu_clk  => s_alu_clk,
            im_clk   => s_im_clk,
@@ -147,7 +191,7 @@ clk_impl: clk_control
 -- Program Counter
 pc_impl: pc
   port map(clk      => s_pc_clk,
-           reset    => reset,
+           reset    => s_reset,
            stall    => s_stall,
            chng_dir => s_redir,
            bridge   => s_bridge,
@@ -175,13 +219,12 @@ im_impl : im_blk_mem_gen_0
     doutb => s_get);
 
 -- Stack Memory
--- TODO ADR stringmode
 s_botval <= signed(x"000000" & s_get) when ((s_inst = x"67") and (s_strmode='0')) else s_resbot;
 stack_impl: stack
   port map(clk      => CLK100MHZ,
            w_clk    => s_st_clk,
            sp_clk   => s_pc_clk,
-           reset    => reset,
+           reset    => s_reset,
            num_push => s_n_push,
            num_pop  => s_n_pop,
            w_bot    => s_botval,
@@ -212,9 +255,10 @@ alu_impl: alu_ex
               im_addr => s_im_addr);
 
 output_buff: uart_shift
+    generic map(N  => 1024)
     Port map(clk   => CLK100MHZ,
              w_clk => s_im_clk,
              data  => std_logic_vector(s_resbot(7 downto 0)),
              w_en  => s_output,
-             uart  => uart_rxd_out);
+             uart  => uart_tmp_out);
 end Behavioral;

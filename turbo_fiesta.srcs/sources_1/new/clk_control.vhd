@@ -14,34 +14,41 @@ end clk_control;
 architecture behavioral of clk_control is
   -- Internal signals
   -- Signal count Counts 0 through 7 to determine which sub-clock is high
-  signal count     : unsigned(2 downto 0) := "000";
+  signal r_count     : unsigned(2 downto 0) := "000";
+  signal s_count     : unsigned(2 downto 0);
   -- Once while reset is high, rst_clock is toggled to reset the PC 
-  signal rst_count : unsigned(2 downto 0) := "000";
+  signal rst_count   : unsigned(2 downto 0) := "000";
   -- Internal copy of pc_clk to apply alt clock during reset
-  signal s_pc_clk  : std_logic;
+  signal s_pc_clk    : std_logic;
+  -- Signal output of rst_count register
+  signal s_rst_count : unsigned(2 downto 0);
 
 begin
-  with count select s_pc_clk <=
+  -- Register outputs
+  s_rst_count <= rst_count;
+  s_count <= r_count;
+  
+  with s_count select s_pc_clk <=
     '1' when "000",
     '1' when "001",
     '1' when "010",
     '0' when others;
 
-  -- assign pc_clk with clk for reset or normal operation
+  -- If in reset mode, toggle PC once to return to top
   pc_clk <= s_pc_clk when   '0' = reset     else
             '1'      when "001" = rst_count else
             '0';
 
-  with count select alu_clk <=
+  with s_count select alu_clk <=
     '1' when "011",
     '0' when others;
 
-  with count select im_clk <=
+  with s_count select im_clk <=
     '1' when "100",
     '1' when "101",
     '0' when others;
 
-  with count select st_clk <=
+  with s_count select st_clk <=
     '1' when "110",
     '1' when "111",
     '0' when others;
@@ -52,7 +59,7 @@ begin
     then
       if (reset = '1')
       then
-        count <= "000";
+        r_count <= "000";
         if (rst_count < to_unsigned(4, 3))
         then
           rst_count <= rst_count + to_unsigned(1, 3);
@@ -61,7 +68,7 @@ begin
         end if;
       else
         rst_count <= "000";
-        count <= count + to_unsigned(1, 3);
+        r_count <= s_count + to_unsigned(1, 3);
       end if;
     end if;
   end process;

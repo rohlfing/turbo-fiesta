@@ -90,7 +90,7 @@ begin
   s_waddr_b <= std_logic_vector(r_sp - to_signed(i_n_pop, 16)) when (i_sp > i_n_pop) else x"0000";
   s_waddr_t <= std_logic_vector(signed(s_waddr_b) + to_signed(1, 16));
 
-  -- zero output when necessary
+  -- Zero output on underflow reads
   top <= signed(s_rdata_t) when (s_raddr_t(15) = '0') else x"00000000";
   mid <= signed(s_rdata_m) when (s_raddr_m(15) = '0') else x"00000000";
   bot <= signed(s_rdata_b) when (s_raddr_b(15) = '0') else x"00000000";
@@ -100,15 +100,22 @@ begin
   begin
     if(rising_edge(sp_clk))
     then
-      r_sp <= to_signed(to_integer(r_sp + i_n_push - i_n_pop), 16);
-      if (r_sp < to_signed(0, 16))
-      then
+      -- Reset stack to empty on processor reset
+      if (reset = '1') then
         r_sp <= x"0000";
+      else
+        -- Increase/decrease size as necessary
+        r_sp <= to_signed(to_integer(r_sp + i_n_push - i_n_pop), 16);
+        -- Don't allow the stack pointer to underflow
+        if (r_sp < to_signed(0, 16))
+        then
+          r_sp <= x"0000";
+        end if;
       end if;
     end if;
   end process;
 
-  -- TODO ADR stack memory block
+  -- Set enable bits for bottom and top stack pushes
   wb_en <= w_clk and (num_push(1) or num_push(0));
   wt_en <= w_clk and num_push(1);
   
@@ -139,7 +146,7 @@ begin
   s_web(3) <= s_web(0);
   s_web(7 downto 4) <= x"0";
   
-  -- Write data (we can assume edges because we were careful with enable ports)
+  -- Write data (we can low and high words because we were careful with enable ports)
   -- Port A
   s_dina(31 downto  0) <= std_logic_vector(w_bot);
   s_dina(63 downto 32) <= std_logic_vector(w_top) when (wrte_algn = '1') else

@@ -38,6 +38,7 @@ architecture Behavioral of alu_ex is
   signal s_dx     :   signed( 1 downto 0) := "00"; -- new dx/dt if changed
   signal s_dy     :   signed( 1 downto 0) := "00"; -- new dy/dt if changed
   signal mul_res  :   signed(63 downto 0) := x"0000000000000000"; -- to be trimmed later
+  signal s_imaddr : std_logic_vector(15 downto 0); -- instruction memory address
 begin
 
   -- Outputs
@@ -52,15 +53,18 @@ begin
   resbot  <= s_resbot;
   dx      <= s_dx;
   dy      <= s_dy;
+  im_addr <= s_imaddr;
 
   -- Some values can be only used output from one thing
-  im_addr <= std_logic_vector(mid(15 downto 0) + (to_signed(80, 8) * top(7 downto 0)));
   mul_res <= mid * top;
   
+  -- This process is on the ALU clock, so all register outputs are updated at that rising edge
   exec: process(clk)
   begin
   if(rising_edge(clk))
   then
+    -- Same regardless of mode/instruction
+    s_imaddr <= std_logic_vector(mid(15 downto 0) + (to_signed(80, 8) * top(7 downto 0)));
     if r_strmode = '1'
     then
       s_smod   <= '0';
@@ -214,6 +218,7 @@ begin
         when x"23" => -- #      
           s_n_pop  <= "00"; 
           s_n_push <= "00";
+          s_bridge <= '1';
         when x"67" => -- g      
           s_n_pop  <= "10"; 
           s_n_push <= "01";

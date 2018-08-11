@@ -49,7 +49,7 @@ begin
 
   -- X PC
   s_dx <= dx when (reset = '0') else "01";
-  s_rPC_x <= unsigned(width) - x"01";
+  s_rPC_x <= unsigned(width) - to_unsigned(1, 8);
   pc_x: pc_1d
   port map(
     clk      => clk,

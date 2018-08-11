@@ -123,7 +123,7 @@ BEGIN
       C_HAS_CE => 0,
       C_HAS_SCLR => 0,
       C_RESTRICT_COUNT => 1,
-      C_COUNT_TO => "1001",
+      C_COUNT_TO => "1010",
       C_COUNT_BY => "1",
       C_COUNT_MODE => 0,
       C_THRESH0_VALUE => "1001",

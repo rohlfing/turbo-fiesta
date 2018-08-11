@@ -60,7 +60,7 @@ ENTITY uart_clk_div IS
   PORT (
     CLK : IN STD_LOGIC;
     THRESH0 : OUT STD_LOGIC;
-    Q : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+    Q : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
 END uart_clk_div;
 
@@ -100,9 +100,9 @@ ARCHITECTURE uart_clk_div_arch OF uart_clk_div IS
       SINIT : IN STD_LOGIC;
       UP : IN STD_LOGIC;
       LOAD : IN STD_LOGIC;
-      L : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+      L : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
       THRESH0 : OUT STD_LOGIC;
-      Q : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+      Q : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
     );
   END COMPONENT c_counter_binary_v12_0_11;
   ATTRIBUTE X_INTERFACE_INFO : STRING;
@@ -119,11 +119,11 @@ BEGIN
       C_IMPLEMENTATION => 0,
       C_VERBOSITY => 0,
       C_XDEVICEFAMILY => "artix7",
-      C_WIDTH => 10,
+      C_WIDTH => 32,
       C_HAS_CE => 0,
       C_HAS_SCLR => 0,
       C_RESTRICT_COUNT => 1,
-      C_COUNT_TO => "1101100100",
+      C_COUNT_TO => "1101100011",
       C_COUNT_BY => "1",
       C_COUNT_MODE => 0,
       C_THRESH0_VALUE => "100000000",
@@ -147,7 +147,7 @@ BEGIN
       SINIT => '0',
       UP => '1',
       LOAD => '0',
-      L => STD_LOGIC_VECTOR(TO_UNSIGNED(0, 10)),
+      L => STD_LOGIC_VECTOR(TO_UNSIGNED(0, 32)),
       THRESH0 => THRESH0,
       Q => Q
     );

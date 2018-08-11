@@ -56,7 +56,7 @@ COMPONENT uart_clk_div
   PORT (
     CLK : IN STD_LOGIC;
     THRESH0 : OUT STD_LOGIC;
-    Q : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+    Q : OUT STD_LOGIC_VECTOR(31 DOWNTO 0)
   );
 END COMPONENT;
 -- COMP_TAG_END ------ End COMPONENT Declaration ------------
