@@ -1,10 +1,10 @@
 -- Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2017.4 (win64) Build 2086221 Fri Dec 15 20:55:39 MST 2017
--- Date        : Sun Aug  5 16:13:47 2018
+-- Date        : Tue Aug 21 17:33:15 2018
 -- Host        : DESKTOP-PEMHL9R running 64-bit major release  (build 9200)
--- Command     : write_vhdl -force -mode funcsim
---               C:/Users/arohl/Vivado_Projects/turbo_fiesta/turbo_fiesta.srcs/sources_1/ip/im_blk_mem_gen_0/im_blk_mem_gen_0_sim_netlist.vhdl
+-- Command     : write_vhdl -force -mode funcsim -rename_top im_blk_mem_gen_0 -prefix
+--               im_blk_mem_gen_0_ im_blk_mem_gen_0_sim_netlist.vhdl
 -- Design      : im_blk_mem_gen_0
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -19,7 +19,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_prim_wrapper_init is
     douta : out STD_LOGIC_VECTOR ( 7 downto 0 );
     doutb : out STD_LOGIC_VECTOR ( 7 downto 0 );
     clka : in STD_LOGIC;
-    clkb : in STD_LOGIC;
     ena : in STD_LOGIC;
     enb : in STD_LOGIC;
     addra : in STD_LOGIC_VECTOR ( 10 downto 0 );
@@ -29,8 +28,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_prim_wrapper_init is
     wea : in STD_LOGIC_VECTOR ( 0 to 0 );
     web : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of im_blk_mem_gen_0_blk_mem_gen_prim_wrapper_init : entity is "blk_mem_gen_prim_wrapper_init";
 end im_blk_mem_gen_0_blk_mem_gen_prim_wrapper_init;
 
 architecture STRUCTURE of im_blk_mem_gen_0_blk_mem_gen_prim_wrapper_init is
@@ -60,62 +57,62 @@ begin
       INIT_02 => X"6F595B3C6E367A222D223C5973447C2220202020202020202020202020202020",
       INIT_03 => X"2020202020202020202020202020203E405F76233A3E223A44563550557C7832",
       INIT_04 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_05 => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_05 => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_06 => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_07 => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_08 => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_07 => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_08 => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_09 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_0A => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_0A => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_0B => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_0C => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_0D => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_0C => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_0D => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_0E => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_0F => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_0F => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_10 => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_11 => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_12 => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_11 => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_12 => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_13 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_14 => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_14 => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_15 => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_16 => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_17 => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_16 => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_17 => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_18 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_19 => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_19 => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_1A => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_1B => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_1C => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_1B => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_1C => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_1D => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_1E => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_1E => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_1F => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_20 => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_21 => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_20 => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_21 => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_22 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_23 => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_23 => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_24 => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_25 => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_26 => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_25 => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_26 => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_27 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_28 => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_28 => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_29 => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_2A => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_2B => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_2A => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_2B => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_2C => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_2D => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_2D => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_2E => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_2F => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_30 => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_2F => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_30 => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_31 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_32 => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_32 => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_33 => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_34 => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_35 => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_34 => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_35 => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_36 => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_37 => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_37 => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_38 => X"202020202020202020202020202020202020202020202020202020202020202A",
-      INIT_39 => X"252B39312C202B2230222F2B39313A2D20202020202020202020202020202020",
-      INIT_3A => X"2020202020202020202020202020202A39333E20205E2020202020202B223022",
+      INIT_39 => X"22252B39312C2B2230222F2B39313A2D20202020202020202020202020202020",
+      INIT_3A => X"2020202020202020202020202020202A39333E20205E2020202020202C2B2230",
       INIT_3B => X"2020202020202020202020202020202020202020202020202020202020202020",
-      INIT_3C => X"39333E20205E2020202020202B223022252B39312C202B2230222F2B39313A2D",
+      INIT_3C => X"39333E20205E2020202020202C2B223022252B39312C2B2230222F2B39313A2D",
       INIT_3D => X"202020202020202020202020202020202020202020202020202020202020202A",
       INIT_3E => X"0000000000000000000000000000000020202020202020202020202020202020",
       INIT_3F => X"0000000000000000000000000000000000000000000000000000000000000000",
@@ -140,7 +137,7 @@ begin
       SIM_DEVICE => "7SERIES",
       SRVAL_A => X"00000",
       SRVAL_B => X"00000",
-      WRITE_MODE_A => "WRITE_FIRST",
+      WRITE_MODE_A => "READ_FIRST",
       WRITE_MODE_B => "READ_FIRST",
       WRITE_WIDTH_A => 9,
       WRITE_WIDTH_B => 9
@@ -151,7 +148,7 @@ begin
       ADDRBWRADDR(13 downto 3) => addrb(10 downto 0),
       ADDRBWRADDR(2 downto 0) => B"000",
       CLKARDCLK => clka,
-      CLKBWRCLK => clkb,
+      CLKBWRCLK => clka,
       DIADI(15 downto 8) => B"00000000",
       DIADI(7 downto 0) => dina(7 downto 0),
       DIBDI(15 downto 8) => B"00000000",
@@ -190,7 +187,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_prim_width is
     douta : out STD_LOGIC_VECTOR ( 7 downto 0 );
     doutb : out STD_LOGIC_VECTOR ( 7 downto 0 );
     clka : in STD_LOGIC;
-    clkb : in STD_LOGIC;
     ena : in STD_LOGIC;
     enb : in STD_LOGIC;
     addra : in STD_LOGIC_VECTOR ( 10 downto 0 );
@@ -200,8 +196,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_prim_width is
     wea : in STD_LOGIC_VECTOR ( 0 to 0 );
     web : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of im_blk_mem_gen_0_blk_mem_gen_prim_width : entity is "blk_mem_gen_prim_width";
 end im_blk_mem_gen_0_blk_mem_gen_prim_width;
 
 architecture STRUCTURE of im_blk_mem_gen_0_blk_mem_gen_prim_width is
@@ -211,7 +205,6 @@ begin
       addra(10 downto 0) => addra(10 downto 0),
       addrb(10 downto 0) => addrb(10 downto 0),
       clka => clka,
-      clkb => clkb,
       dina(7 downto 0) => dina(7 downto 0),
       dinb(7 downto 0) => dinb(7 downto 0),
       douta(7 downto 0) => douta(7 downto 0),
@@ -231,7 +224,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_generic_cstr is
     douta : out STD_LOGIC_VECTOR ( 7 downto 0 );
     doutb : out STD_LOGIC_VECTOR ( 7 downto 0 );
     clka : in STD_LOGIC;
-    clkb : in STD_LOGIC;
     ena : in STD_LOGIC;
     enb : in STD_LOGIC;
     addra : in STD_LOGIC_VECTOR ( 10 downto 0 );
@@ -241,8 +233,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_generic_cstr is
     wea : in STD_LOGIC_VECTOR ( 0 to 0 );
     web : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of im_blk_mem_gen_0_blk_mem_gen_generic_cstr : entity is "blk_mem_gen_generic_cstr";
 end im_blk_mem_gen_0_blk_mem_gen_generic_cstr;
 
 architecture STRUCTURE of im_blk_mem_gen_0_blk_mem_gen_generic_cstr is
@@ -252,7 +242,6 @@ begin
       addra(10 downto 0) => addra(10 downto 0),
       addrb(10 downto 0) => addrb(10 downto 0),
       clka => clka,
-      clkb => clkb,
       dina(7 downto 0) => dina(7 downto 0),
       dinb(7 downto 0) => dinb(7 downto 0),
       douta(7 downto 0) => douta(7 downto 0),
@@ -272,7 +261,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_top is
     douta : out STD_LOGIC_VECTOR ( 7 downto 0 );
     doutb : out STD_LOGIC_VECTOR ( 7 downto 0 );
     clka : in STD_LOGIC;
-    clkb : in STD_LOGIC;
     ena : in STD_LOGIC;
     enb : in STD_LOGIC;
     addra : in STD_LOGIC_VECTOR ( 10 downto 0 );
@@ -282,8 +270,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_top is
     wea : in STD_LOGIC_VECTOR ( 0 to 0 );
     web : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of im_blk_mem_gen_0_blk_mem_gen_top : entity is "blk_mem_gen_top";
 end im_blk_mem_gen_0_blk_mem_gen_top;
 
 architecture STRUCTURE of im_blk_mem_gen_0_blk_mem_gen_top is
@@ -293,7 +279,6 @@ begin
       addra(10 downto 0) => addra(10 downto 0),
       addrb(10 downto 0) => addrb(10 downto 0),
       clka => clka,
-      clkb => clkb,
       dina(7 downto 0) => dina(7 downto 0),
       dinb(7 downto 0) => dinb(7 downto 0),
       douta(7 downto 0) => douta(7 downto 0),
@@ -313,7 +298,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_v8_4_1_synth is
     douta : out STD_LOGIC_VECTOR ( 7 downto 0 );
     doutb : out STD_LOGIC_VECTOR ( 7 downto 0 );
     clka : in STD_LOGIC;
-    clkb : in STD_LOGIC;
     ena : in STD_LOGIC;
     enb : in STD_LOGIC;
     addra : in STD_LOGIC_VECTOR ( 10 downto 0 );
@@ -323,8 +307,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_v8_4_1_synth is
     wea : in STD_LOGIC_VECTOR ( 0 to 0 );
     web : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of im_blk_mem_gen_0_blk_mem_gen_v8_4_1_synth : entity is "blk_mem_gen_v8_4_1_synth";
 end im_blk_mem_gen_0_blk_mem_gen_v8_4_1_synth;
 
 architecture STRUCTURE of im_blk_mem_gen_0_blk_mem_gen_v8_4_1_synth is
@@ -334,7 +316,6 @@ begin
       addra(10 downto 0) => addra(10 downto 0),
       addrb(10 downto 0) => addrb(10 downto 0),
       clka => clka,
-      clkb => clkb,
       dina(7 downto 0) => dina(7 downto 0),
       dinb(7 downto 0) => dinb(7 downto 0),
       douta(7 downto 0) => douta(7 downto 0),
@@ -430,7 +411,7 @@ entity im_blk_mem_gen_0_blk_mem_gen_v8_4_1 is
   attribute C_BYTE_SIZE : integer;
   attribute C_BYTE_SIZE of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is 8;
   attribute C_COMMON_CLK : integer;
-  attribute C_COMMON_CLK of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is 0;
+  attribute C_COMMON_CLK of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is 1;
   attribute C_COUNT_18K_BRAM : string;
   attribute C_COUNT_18K_BRAM of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "1";
   attribute C_COUNT_36K_BRAM : string;
@@ -462,7 +443,7 @@ entity im_blk_mem_gen_0_blk_mem_gen_v8_4_1 is
   attribute C_EN_SLEEP_PIN : integer;
   attribute C_EN_SLEEP_PIN of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is 0;
   attribute C_EST_POWER_SUMMARY : string;
-  attribute C_EST_POWER_SUMMARY of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "Estimated Power for IP     :     2.628697 mW";
+  attribute C_EST_POWER_SUMMARY of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "Estimated Power for IP     :     2.687835 mW";
   attribute C_FAMILY : string;
   attribute C_FAMILY of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "artix7";
   attribute C_HAS_AXI_ID : integer;
@@ -552,7 +533,7 @@ entity im_blk_mem_gen_0_blk_mem_gen_v8_4_1 is
   attribute C_WRITE_DEPTH_B : integer;
   attribute C_WRITE_DEPTH_B of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is 2000;
   attribute C_WRITE_MODE_A : string;
-  attribute C_WRITE_MODE_A of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "WRITE_FIRST";
+  attribute C_WRITE_MODE_A of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "READ_FIRST";
   attribute C_WRITE_MODE_B : string;
   attribute C_WRITE_MODE_B of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "READ_FIRST";
   attribute C_WRITE_WIDTH_A : integer;
@@ -561,8 +542,6 @@ entity im_blk_mem_gen_0_blk_mem_gen_v8_4_1 is
   attribute C_WRITE_WIDTH_B of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is 8;
   attribute C_XDEVICEFAMILY : string;
   attribute C_XDEVICEFAMILY of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "artix7";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "blk_mem_gen_v8_4_1";
   attribute downgradeipidentifiedwarnings : string;
   attribute downgradeipidentifiedwarnings of im_blk_mem_gen_0_blk_mem_gen_v8_4_1 : entity is "yes";
 end im_blk_mem_gen_0_blk_mem_gen_v8_4_1;
@@ -633,7 +612,6 @@ inst_blk_mem_gen: entity work.im_blk_mem_gen_0_blk_mem_gen_v8_4_1_synth
       addra(10 downto 0) => addra(10 downto 0),
       addrb(10 downto 0) => addrb(10 downto 0),
       clka => clka,
-      clkb => clkb,
       dina(7 downto 0) => dina(7 downto 0),
       dinb(7 downto 0) => dinb(7 downto 0),
       douta(7 downto 0) => douta(7 downto 0),
@@ -708,7 +686,7 @@ architecture STRUCTURE of im_blk_mem_gen_0 is
   attribute C_BYTE_SIZE : integer;
   attribute C_BYTE_SIZE of U0 : label is 8;
   attribute C_COMMON_CLK : integer;
-  attribute C_COMMON_CLK of U0 : label is 0;
+  attribute C_COMMON_CLK of U0 : label is 1;
   attribute C_COUNT_18K_BRAM : string;
   attribute C_COUNT_18K_BRAM of U0 : label is "1";
   attribute C_COUNT_36K_BRAM : string;
@@ -740,7 +718,7 @@ architecture STRUCTURE of im_blk_mem_gen_0 is
   attribute C_EN_SLEEP_PIN : integer;
   attribute C_EN_SLEEP_PIN of U0 : label is 0;
   attribute C_EST_POWER_SUMMARY : string;
-  attribute C_EST_POWER_SUMMARY of U0 : label is "Estimated Power for IP     :     2.628697 mW";
+  attribute C_EST_POWER_SUMMARY of U0 : label is "Estimated Power for IP     :     2.687835 mW";
   attribute C_FAMILY : string;
   attribute C_FAMILY of U0 : label is "artix7";
   attribute C_HAS_AXI_ID : integer;
@@ -830,7 +808,7 @@ architecture STRUCTURE of im_blk_mem_gen_0 is
   attribute C_WRITE_DEPTH_B : integer;
   attribute C_WRITE_DEPTH_B of U0 : label is 2000;
   attribute C_WRITE_MODE_A : string;
-  attribute C_WRITE_MODE_A of U0 : label is "WRITE_FIRST";
+  attribute C_WRITE_MODE_A of U0 : label is "READ_FIRST";
   attribute C_WRITE_MODE_B : string;
   attribute C_WRITE_MODE_B of U0 : label is "READ_FIRST";
   attribute C_WRITE_WIDTH_A : integer;

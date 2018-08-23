@@ -1,10 +1,10 @@
 -- Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2017.4 (win64) Build 2086221 Fri Dec 15 20:55:39 MST 2017
--- Date        : Sun Aug  5 16:13:47 2018
+-- Date        : Tue Aug 21 17:33:15 2018
 -- Host        : DESKTOP-PEMHL9R running 64-bit major release  (build 9200)
--- Command     : write_vhdl -force -mode synth_stub
---               C:/Users/arohl/Vivado_Projects/turbo_fiesta/turbo_fiesta.srcs/sources_1/ip/im_blk_mem_gen_0/im_blk_mem_gen_0_stub.vhdl
+-- Command     : write_vhdl -force -mode synth_stub -rename_top im_blk_mem_gen_0 -prefix
+--               im_blk_mem_gen_0_ im_blk_mem_gen_0_stub.vhdl
 -- Design      : im_blk_mem_gen_0
 -- Purpose     : Stub declaration of top-level module interface
 -- Device      : xc7a35ticsg324-1L

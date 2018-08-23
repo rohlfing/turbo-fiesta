@@ -5,17 +5,16 @@ use IEEE.numeric_std.ALL;
 use xil_defaultlib.array2D.all;
 
 entity stack is
-  port(clk      : in  std_logic; -- Clock
-       w_clk    : in  std_logic; -- Clock for write enable
-       sp_clk   : in  std_logic; -- Clock for sp update
-       reset    : in  std_logic; -- Reset
-       num_push : in  unsigned( 1 downto 0); -- '1' if result is to be pushed
-       num_pop  : in  unsigned( 1 downto 0);  -- Number removed in inst
-       w_bot    : in    signed(31 downto 0);  -- Data to write onto stack
-       w_top    : in    signed(31 downto 0);  -- Data to write higher onto stack (optional)
-       top      : out   signed(31 downto 0);  -- Data on top of stack
-       mid      : out   signed(31 downto 0);  -- Data 1 below top value
-       bot      : out   signed(31 downto 0)); -- Data 2 below top value
+  port(clk       : in  std_logic; -- Clock
+       w_enable  : in  std_logic; -- Write enable (high for only one clock cycle)
+       alu_flags : in  std_logic_vector(15 downto 0); -- Flags from ALU (bitfield in alu_ex.vhd)
+       w_bot     : in    signed(31 downto 0);  -- Data to write onto stack
+       w_top     : in    signed(31 downto 0);  -- Data to write higher onto stack (optional)
+       prev_sp   : in  unsigned(15 downto 0);
+       curr_sp   : out unsigned(15 downto 0);
+       top       : out   signed(31 downto 0);  -- Data on top of stack
+       mid       : out   signed(31 downto 0);  -- Data 1 below top value
+       bot       : out   signed(31 downto 0)); -- Data 2 below top value
 end stack;
 
 architecture behavioral of stack is
@@ -36,144 +35,122 @@ COMPONENT blk_mem_gen_0
     doutb : OUT STD_LOGIC_VECTOR(63 DOWNTO 0));
 END COMPONENT;
 
-  -- Registers
-  signal r_sp      :   signed(15 downto 0) := x"0000";
-  
-  -- Read addresses
-  signal s_raddr_t : std_logic_vector(15 downto 0);
-  signal s_raddr_m : std_logic_vector(15 downto 0);
-  signal s_raddr_b : std_logic_vector(15 downto 0);
-  -- Read data
-  signal s_rdata_t : std_logic_vector(31 downto 0);
-  signal s_rdata_m : std_logic_vector(31 downto 0);
-  signal s_rdata_b : std_logic_vector(31 downto 0);
-  -- Write addresses
-  signal s_waddr_t : std_logic_vector(15 downto 0);
-  signal s_waddr_b : std_logic_vector(15 downto 0);
-
   -- integers
   signal i_n_pop   : integer;
   signal i_n_push  : integer;
-  signal i_sp      : integer;
-  
-  -- write enables
-  signal wb_en     : std_logic;
-  signal wt_en     : std_logic;
-  
-  -- helpful
-  signal read_algn : std_logic;
-  signal wrte_algn : std_logic;
-  
-  -- memory input signals
+  signal i_prev_sp : integer;
+  signal i_temp_sp : integer;
+  signal i_curr_sp : integer;
+
+  -- Addresses before bounds checking
+  signal s_temp_a  : signed(15 downto 0);
+  signal s_temp_b  : signed(15 downto 0);
+
+  -- Flags
+  signal underflow : std_logic; -- Set if stack size is less than 3
+  signal aligned   : std_logic; -- Set if address of bottom popped value is even (aligned with port A)
+
+  -- Memory interface signals
   signal s_wea   : std_logic_vector( 7 downto 0);
   signal s_addra : std_logic_vector( 9 downto 0);
-  signal s_dina  : std_logic_vector(63 downto 0);
+  signal s_dina  :           signed(63 downto 0);
   signal s_douta : std_logic_vector(63 downto 0);
   signal s_web   : std_logic_vector( 7 downto 0);
   signal s_addrb : std_logic_vector( 9 downto 0);
-  signal s_dinb  : std_logic_vector(63 downto 0);
+  signal s_dinb  :           signed(63 downto 0);
   signal s_doutb : std_logic_vector(63 downto 0);
       
 begin
 
-  -- Get integers
-  i_n_push <= to_integer(num_push);
-  i_n_pop  <= to_integer(num_pop);
-  i_sp     <= to_integer(r_sp);
+  -- Outputs
+  curr_sp <= to_unsigned(i_curr_sp, 16);
 
-  -- Compute addresses
-  --  Read
-  s_raddr_b <= std_logic_vector(r_sp - to_signed(3, 16));
-  s_raddr_m <= std_logic_vector(signed(s_raddr_b) + to_signed(1, 16));
-  s_raddr_t <= std_logic_vector(signed(s_raddr_b) + to_signed(2, 16));
-  --  Write
-  s_waddr_b <= std_logic_vector(r_sp - to_signed(i_n_pop, 16)) when (i_sp > i_n_pop) else x"0000";
-  s_waddr_t <= std_logic_vector(signed(s_waddr_b) + to_signed(1, 16));
+  -- Get integers; compute current stack pointer
+  i_n_push  <= to_integer(unsigned(alu_flags( 9 downto  8)));
+  i_n_pop   <= to_integer(unsigned(alu_flags(11 downto 10)));
+  i_prev_sp <= to_integer(prev_sp);
+  i_temp_sp <= i_prev_sp - i_n_pop;
+  i_curr_sp <= (i_temp_sp + i_n_push) when i_temp_sp > 0 else i_n_push;
 
-  -- Zero output on underflow reads
-  top <= signed(s_rdata_t) when (s_raddr_t(15) = '0') else x"00000000";
-  mid <= signed(s_rdata_m) when (s_raddr_m(15) = '0') else x"00000000";
-  bot <= signed(s_rdata_b) when (s_raddr_b(15) = '0') else x"00000000";
+  -- Set reusable flags
+  underflow <= '1' when i_curr_sp < 3 else '0';
+  aligned   <= '1' when (i_curr_sp mod 2) = 1 else '0';
 
-  -- Update stack pointer
-  sp_update_proc: process(sp_clk)
-  begin
-    if(rising_edge(sp_clk))
-    then
-      -- Reset stack to empty on processor reset
-      if (reset = '1') then
-        r_sp <= x"0000";
-      else
-        -- Increase/decrease size as necessary
-        r_sp <= to_signed(to_integer(r_sp + i_n_push - i_n_pop), 16);
-        -- Don't allow the stack pointer to underflow
-        if (r_sp < to_signed(0, 16))
-        then
-          r_sp <= x"0000";
-        end if;
-      end if;
-    end if;
-  end process;
+  -- Compute addresses. If base address would be negative, set to bottom of stack
+  s_temp_a  <= to_signed(i_curr_sp - 3, 16);
+  s_addra   <= std_logic_vector(s_temp_a(10 downto 1)) when underflow = '0' else
+               "0000000000";
+  s_temp_b  <= to_signed(i_curr_sp - 1, 16);
+  s_addrb   <= std_logic_vector(s_temp_b(10 downto 1)) when underflow = '0' else
+               "0000000001";
 
-  -- Set enable bits for bottom and top stack pushes
-  wb_en <= w_clk and (num_push(1) or num_push(0));
-  wt_en <= w_clk and num_push(1);
-  
-  -- Assign memory addresses
-  s_addra <= s_raddr_b(10 downto 1) when (w_clk = '0') else s_waddr_b(10 downto 1);
-  s_addrb <= std_logic_vector(unsigned(s_addra) + to_unsigned(1, 10));
-  
-  -- Determine if read and write are aligned
-  read_algn <= '1' when (s_raddr_b(1) = s_raddr_m(1)) else '0';
-  wrte_algn <= '1' when (s_waddr_b(1) = s_waddr_t(1)) else '0';
-  
-  -- Write enable bits
-  -- Port A
-  s_wea(0) <= '1' when (wb_en='1') and (wrte_algn = '1') else '0';
-  s_wea(1) <= s_wea(0);
-  s_wea(2) <= s_wea(0);
-  s_wea(3) <= s_wea(0);
-  s_wea(4) <= '1' when (wb_en='1') and (wrte_algn = '0') else
-              '1' when (wt_en='1') and (wrte_algn = '1') else
-              '0';
-  s_wea(5) <= s_wea(4);
-  s_wea(6) <= s_wea(4);
-  s_wea(7) <= s_wea(4);
-  -- Port B
-  s_web(0) <= '1' when (wt_en='1') and (wrte_algn = '0') else '0';
-  s_web(1) <= s_web(0);
-  s_web(2) <= s_web(0);
-  s_web(3) <= s_web(0);
-  s_web(7 downto 4) <= x"0";
-  
-  -- Write data (we can low and high words because we were careful with enable ports)
-  -- Port A
-  s_dina(31 downto  0) <= std_logic_vector(w_bot);
-  s_dina(63 downto 32) <= std_logic_vector(w_top) when (wrte_algn = '1') else
-                          std_logic_vector(w_bot);
-  -- Port B
-  s_dinb <= x"00000000" & std_logic_vector(w_top);
-  
-  -- Read data
-  s_rdata_b <= s_douta(31 downto  0) when (read_algn = '1') else
-               s_douta(63 downto 32);
-  s_rdata_m <= s_douta(63 downto 32) when (read_algn = '1') else
-               s_doutb(31 downto  0);
-  s_rdata_t <= s_doutb(31 downto  0) when (read_algn = '1') else
-               s_doutb(63 downto 32);
-  
+  -- Set the write data and byte enables
+  -- Write to bottom of stack only if stack was previously empty
+  s_dina(31 downto  0) <= w_bot;
+  s_wea ( 3 downto  0) <= x"0"  when w_enable = '0'                    else
+                          x"F"  when i_curr_sp = i_n_push              else
+                          x"0";
+  -- Write to word 1 on certain underflows or if pushing 2 while aligned
+  s_dina(63 downto 32) <= w_top when i_curr_sp = 2 and i_n_push = 2    else
+                          w_bot;
+  s_wea ( 7 downto  4) <= x"0"  when w_enable = '0'                    else
+                          x"F"  when i_curr_sp = 2 and i_n_push > 0    else
+                          x"F"  when aligned = '1' and i_n_push = 2    else
+                          x"0";
+  -- Write to word 2 for aligned push or unaligned push 2
+  s_dinb(31 downto  0) <= w_top when aligned = '1' and i_n_push = 2    else
+                          w_bot;
+  s_web ( 3 downto  0) <= x"0"  when underflow = '1' or w_enable = '0' else
+                          x"F"  when i_n_push = 2                      else
+                          x"F"  when aligned = '1' and i_n_push = 1    else
+                          x"0";
+  -- Write to word 3 for unaligned push (but never when underflowed)
+  s_dinb(63 downto 32) <= w_top when aligned = '0' and i_n_push = 2    else
+                          w_bot;
+  s_web ( 7 downto  4) <= x"0"  when underflow = '1' or w_enable = '0' else
+                          x"F"  when aligned = '0' and i_n_push > 0    else
+                          x"0";
+
+  -- Map memory output to 'popped' stack values
+  -- Top -- Direct read from input cases
+  top <= w_top when i_n_push = 2 else
+         w_bot when i_n_push = 1 else
+         -- Underflow cases
+         x"00000000" when i_curr_sp = 0 else
+         signed(s_douta(31 downto  0)) when i_curr_sp = 1 else 
+         signed(s_douta(63 downto 32)) when i_curr_sp = 2 else
+         -- Normal read cases
+         signed(s_doutb(31 downto  0)) when aligned = '1' else 
+         signed(s_doutb(63 downto 32));
+
+  -- Mid -- Direct read from input cases
+  mid <= w_bot when i_n_push = 2 else
+         -- Underflow cases
+         x"00000000" when i_curr_sp < 2 else
+         signed(s_douta(31 downto  0)) when i_curr_sp = 2 else
+         -- Normal read cases
+         signed(s_douta(63 downto 32)) when aligned = '1' else 
+         signed(s_doutb(31 downto  0));
+
+  -- Bot -- Underflow cases
+  bot <= x"00000000" when underflow = '1' else
+         -- Normal read cases
+         signed(s_douta(31 downto  0)) when aligned = '1' else 
+         signed(s_douta(63 downto 32));
+
+  -- Block memory IP core holding the "stack"
   stack_mem : blk_mem_gen_0
     PORT MAP (
       clka  => clk,
       ena   => '1',
       wea   => s_wea,
       addra => s_addra,
-      dina  => s_dina,
+      dina  => std_logic_vector(s_dina),
       douta => s_douta,
       clkb  => clk,
       enb   => '1',
       web   => s_web,
       addrb => s_addrb,
-      dinb  => s_dinb,
+      dinb  => std_logic_vector(s_dinb),
       doutb => s_doutb);
 end behavioral;

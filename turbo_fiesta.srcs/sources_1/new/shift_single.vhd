@@ -12,7 +12,7 @@ end shift_single;
 
 architecture behavioral of shift_single is
   -- Register to hold current value
-  signal r_Q        : std_logic_vector(7 downto 0) := x"3F";
+  signal r_Q        : std_logic_vector(7 downto 0) := x"00";--x"3F";
   -- Other internal signals
   signal s_w_en     : std_logic;
   signal s_Q        : std_logic_vector(7 downto 0); -- Output value

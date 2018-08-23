@@ -2,319 +2,157 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
+-- Output alu_flags is
+--  bit(s) flag
+--  0      Direction Change?
+--  1      Write to IM?
+--  2      Bridge?
+--  3      Write to stdout?
+--  4      String Mode?
+--  5      Push from IM?
+--  7-6    Unused
+--  9-8    # values pushed
+--  11-10  # values popped
+--  13-12  New dy
+--  15-14  New dx
+
 entity alu_ex is
-    port ( clk     : in  std_logic;
-           inst    : in  std_logic_vector(7 downto 0);
-           bot     : in  signed(31 downto 0);
-           mid     : in  signed(31 downto 0);
-           top     : in  signed(31 downto 0);
-           stdin   : in  signed(31 downto 0);
-           redir   : out std_logic;
-           smod    : out std_logic;
-           bridge  : out std_logic;
-           output  : out std_logic;
-           strmode : out std_logic;
-           n_pop   : out unsigned( 1 downto 0);
-           n_push  : out unsigned( 1 downto 0);
-           restop  : out   signed(31 downto 0);
-           resbot  : out   signed(31 downto 0);
-           dx      : out   signed( 1 downto 0);
-           dy      : out   signed( 1 downto 0);
-           im_addr : out std_logic_vector(15 downto 0));
+  port (inst      : in  std_logic_vector(7 downto 0);
+        strmode   : in  std_logic;
+        bot       : in  signed(31 downto 0);
+        mid       : in  signed(31 downto 0);
+        top       : in  signed(31 downto 0);
+        stdin     : in  signed(31 downto 0);
+        alu_flags : out std_logic_vector(15 downto 0);
+        restop    : out signed(31 downto 0);
+        resbot    : out signed(31 downto 0);
+        im_addr   : out std_logic_vector(10 downto 0));
 end alu_ex;
 
 architecture Behavioral of alu_ex is
-  -- Registers
-  signal r_strmode: std_logic := '0'; -- '1' for stringmode
-  -- Copies of output signals
-  signal s_redir  : std_logic := '0'; -- '1' if dx or dy change
-  signal s_smod   : std_logic := '0'; -- '1' if writing to IM
-  signal s_bridge : std_logic := '0'; -- '1' if '#' command
-  signal s_output : std_logic := '0'; -- '1' if printing to UART
-  signal s_n_pop  : unsigned( 1 downto 0) := "00"; -- Number of values popped
-  signal s_n_push : unsigned( 1 downto 0) := "00"; -- Number of values to push
-  signal s_restop :   signed(31 downto 0) := x"00000000"; -- 32-bit signed result to top of stack + 1
-  signal s_resbot :   signed(31 downto 0) := x"00000000"; -- 32-bit signed result to top of stack
-  signal s_dx     :   signed( 1 downto 0) := "00"; -- new dx/dt if changed
-  signal s_dy     :   signed( 1 downto 0) := "00"; -- new dy/dt if changed
-  signal mul_res  :   signed(63 downto 0) := x"0000000000000000"; -- to be trimmed later
-  signal s_imaddr : std_logic_vector(15 downto 0); -- instruction memory address
+  -- Intermediate signals
+  signal s_flags   : std_logic_vector(15 downto 0); -- Replaced if string mode is on
+  signal s_vertf   : std_logic_vector(15 downto 0); -- Flags if command is '|'
+  signal s_horzf   : std_logic_vector(15 downto 0); -- Flags if command is '_'
+  signal s_im_addr : std_logic_vector(15 downto 0); -- Zero-padded copy of output
+  signal s_zero    : signed(31 downto 0); -- Literally zero
+  signal s_one     : signed(31 downto 0); -- Literally one
+  signal s_mul_res : signed(63 downto 0); -- Multiplication result. Lower 32 bits used
+  signal s_mul_cut : signed(31 downto 0); -- Lower word of multiply result
+  signal s_mod_res : signed(31 downto 0);
+  signal s_not_res : signed(31 downto 0); -- 1 if top = 0x0, 0 else
+  signal s_gt_res  : signed(31 downto 0); -- 1 if mid > top
+  signal s_restop  : signed(31 downto 0); -- Top result if strmode = '0'
+  signal s_resbot  : signed(31 downto 0); -- Bot result if strmode = '0'
+
 begin
 
-  -- Outputs
-  redir   <= s_redir;
-  smod    <= s_smod;
-  bridge  <= s_bridge;
-  output  <= s_output;
-  strmode <= r_strmode;
-  n_pop   <= s_n_pop;
-  n_push  <= s_n_push;
-  restop  <= s_restop;
-  resbot  <= s_resbot;
-  dx      <= s_dx;
-  dy      <= s_dy;
-  im_addr <= s_imaddr;
+-- IM address only used for 'g' and 'p' instructions
+s_im_addr <= std_logic_vector(mid(15 downto 0) + (to_signed(80, 8) * top(7 downto 0)));
+im_addr   <= s_im_addr(10 downto 0);
 
-  -- Some values can be only used output from one thing
-  mul_res <= mid * top;
-  
-  -- This process is on the ALU clock, so all register outputs are updated at that rising edge
-  exec: process(clk)
-  begin
-  if(rising_edge(clk))
-  then
-    -- Same regardless of mode/instruction
-    s_imaddr <= std_logic_vector(mid(15 downto 0) + (to_signed(80, 8) * top(7 downto 0)));
-    if r_strmode = '1'
-    then
-      s_smod   <= '0';
-      s_redir  <= '0';
-      s_bridge <= '0';
-      s_output <= '0';
-      r_strmode<= '1';
-      s_dx     <= "00";
-      s_dy     <= "00";
-      s_n_push <= "01";
-      s_n_pop  <= "00";
-      s_resbot <= signed(x"000000" & inst);
-      s_restop <= x"00000000";
-      if inst = x"22"
-      then
-        r_strmode <= '0';
-        s_n_push <= "00";
-      end if;
-    else
-      s_smod   <= '0';
-      s_redir  <= '0';
-      s_bridge <= '0';
-      s_output <= '0';
-      r_strmode<= '0';
-      s_dx     <= "00";
-      s_dy     <= "00";
-      s_resbot <= x"00000000";
-      s_restop <= x"00000000";
-      
-      case inst is
-        when x"2b" => -- +      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          s_resbot <= mid + top;
-        when x"2d" => -- -      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          s_resbot <= mid - top;
-        when x"2a" => -- *      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          s_resbot <= mul_res(31 downto 0);
-        when x"2f" => -- /      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          s_resbot <= mid / top;
-        when x"25" => -- %      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          s_resbot <= mid mod top;
-        when x"21" => -- !      
-          s_n_pop  <= "01"; 
-          s_n_push <= "01";
-          if (top = x"00000000")
-          then 
-            s_resbot <= x"00000001";
-          else
-            s_resbot <= x"00000000";
-          end if;
-        when x"60" => -- `      
-          s_n_pop  <= "10";
-          s_n_push <= "01";
-          if (mid > top)
-          then 
-            s_resbot <= x"00000001";
-          else
-            s_resbot <= x"00000000";
-          end if;
-        when x"3e" => -- >      
-          s_n_pop  <= "00";
-          s_n_push <= "00";
-          s_redir  <= '1';
-          s_dx     <= "01";
-          s_dy     <= "00";
-        when x"3c" => -- <      
-          s_n_pop  <= "00"; 
-          s_n_push <= "00";
-          s_redir  <= '1';
-          s_dx     <= "11";
-          s_dy     <= "00";
-        when x"5e" => -- ^
-          s_n_pop  <= "00"; 
-          s_n_push <= "00";
-          s_redir  <= '1';
-          s_dx     <= "00";
-          s_dy     <= "11";
-        when x"76" => -- v
-          s_n_pop  <= "00"; 
-          s_n_push <= "00";
-          s_redir  <= '1';
-          s_dx     <= "00";
-          s_dy     <= "01";
-        when x"3f" => -- ?
-          s_n_pop  <= "01"; 
-          s_n_push <= "00";
-          s_redir  <= '1';
-          -- TODO ADR randomize this
-          s_dx     <= "11";
-          s_dy     <= "00";
-        when x"5f" => -- _      
-          s_n_pop  <= "01"; 
-          s_n_push <= "00";
-          s_redir  <= '1';
-          if (top = x"00000000")
-          then
-            s_dx   <= "01";
-          else
-            s_dx   <= "11";
-          end if;
-          s_dy     <= "00";
-        when x"7c" => -- |      
-          s_n_pop  <= "01"; 
-          s_n_push <= "00";
-          s_redir <= '1';
-          s_dx     <= "00";
-          if (top = x"00000000")
-          then
-            s_dy   <= "01";
-          else
-            s_dy   <= "11";
-          end if;
-        when x"22" => -- "      
-          s_n_pop  <= "00"; 
-          s_n_push <= "00";
-          r_strmode<= '1';
-        when x"3a" => -- :      
-          s_n_pop  <= "01"; 
-          s_n_push <= "10";
-          s_resbot <= top;
-          s_restop <= top;
-        when x"5c" => -- \      
-          s_n_pop  <= "10"; 
-          s_n_push <= "10";
-          s_resbot <= top;
-          s_restop <= mid;
-        when x"24" => -- $      
-          s_n_pop  <= "01"; 
-          s_n_push <= "00";
-        when x"2e" => -- .      
-          s_n_pop  <= "01"; 
-          s_n_push <= "00";
-          s_resbot <= top;
-          s_output <= '1';
-          -- TODO ADR figure out output
-        when x"2c" => -- ,      
-          s_n_pop  <= "01"; 
-          s_n_push <= "00";
-          s_resbot <= top;
-          s_output <= '1';
-          -- TODO ADR figure out output
-        when x"23" => -- #      
-          s_n_pop  <= "00"; 
-          s_n_push <= "00";
-          s_bridge <= '1';
-        when x"67" => -- g      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          --s_resbot <= im_rdata; -- Now implemented at top level
-        when x"70" => -- p      
-          s_n_pop  <= "11"; 
-          s_n_push <= "00";
-          s_smod   <= '1';
-          s_resbot <= bot;
-        when x"26" => -- &      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          s_resbot <= stdin; 
-        when x"7e" => -- ~      
-          s_n_pop  <= "10"; 
-          s_n_push <= "01";
-          s_resbot <= mid + top;
-          s_dx     <= "00";
-          s_dy     <= "00";
-        when x"40" => -- '@'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "00";
-          s_redir  <= '1'; 
-          s_dx     <= "00";
-          s_dy     <= "00";
-        when x"30" => -- '0'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000000";
-        when x"31" => -- '1'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000001";
-        when x"32" => -- '2'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000002";
-        when x"33" => -- '3'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000003";
-        when x"34" => -- '4'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000004";
-        when x"35" => -- '5'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000005";
-        when x"36" => -- '6'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000006";
-        when x"37" => -- '7'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000007";
-        when x"38" => -- '8'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000008";
-        when x"39" => -- '9'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"00000009";
-        when x"61" => -- 'a'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"0000000a";
-        when x"62" => -- 'b'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"0000000b";
-        when x"63" => -- 'c'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"0000000c";
-        when x"64" => -- 'd'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"0000000d";
-        when x"65" => -- 'e'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"0000000e";
-        when x"66" => -- 'f'     
-          s_n_pop  <= "00"; 
-          s_n_push <= "01";
-          s_resbot <= x"0000000f";
-        -- Treat anything undefined as a noop
-        when others => -- ' '
-          s_n_pop  <= "00";
-          s_n_push <= "00";
-      end case;
-    end if;
-  end if;
-  end process;
+-- Get flags for conditional redirects
+with top select s_vertf <=
+  x"1401" when x"00000000",
+  x"3401" when others;
+with top select s_horzf <=
+  x"4401" when x"00000000",
+  x"C401" when others;
+
+with inst select s_flags <=
+  x"0900" when x"2b", -- +
+  x"0900" when x"2d", -- -
+  x"0900" when x"2a", -- *
+  x"0900" when x"2f", -- /
+  x"0900" when x"25", -- %
+  x"0500" when x"21", -- !
+  x"0900" when x"60", -- `
+  x"4001" when x"3e", -- >
+  x"C001" when x"3c", -- <
+  x"3001" when x"5e", -- ^
+  x"1001" when x"76", -- v
+  -- TODO ADR randomize '?' instruction
+  x"C001" when x"3f", -- ?
+  s_horzf when x"5f", -- _
+  s_vertf when x"7c", -- |
+  x"0010" when x"22", -- "
+  x"0600" when x"3a", -- :
+  x"0A00" when x"5c", -- \
+  x"0400" when x"24", -- $
+  -- TODO ADR differentiate outputs
+  x"0408" when x"2e", -- .
+  x"0408" when x"2c", -- ,
+  x"0004" when x"23", -- #
+  x"0920" when x"67", -- g
+  x"0C02" when x"70", -- p
+  -- TODO ADR read from UART in
+  x"0100" when x"26", -- &
+  x"0100" when x"7e", -- ~
+  x"0001" when x"40", -- @
+  x"0000" when x"20", --' '
+  x"0100" when others;-- 0, 1, ..., f
+
+-- Compute the longer result expressions here
+s_zero    <= x"00000000";
+s_one     <= x"00000001";
+s_mul_res <= mid * top;
+s_mul_cut <= s_mul_res(31 downto 0);
+s_not_res <= s_one when top = s_zero else s_zero;
+s_gt_res  <= s_one when mid > top    else s_zero;
+s_mod_res <= to_signed(to_integer(mid) mod to_integer(top), 32);
+
+-- Select bottom pushed value (if any values are pushed)
+with inst select s_resbot <=
+  mid + top   when x"2b", -- +
+  mid - top   when x"2d", -- -
+  s_mul_cut   when x"2a", -- *
+  mid / top   when x"2f", -- /
+  s_mod_res   when x"25", -- % --mid mod top
+  s_not_res   when x"21", -- !
+  s_gt_res    when x"60", -- `
+  top         when x"3a", -- :
+  top         when x"5c", -- \
+  -- TODO ADR differentiate outputs
+  top         when x"2e", -- .
+  top         when x"2c", -- ,
+  -- TODO ADR read from UART in
+  stdin       when x"26", -- &
+  stdin       when x"7e", -- ~
+  -- Push literal 0, 1, ..., f
+  x"00000000" when x"30", -- 0
+  x"00000001" when x"31", -- 1
+  x"00000002" when x"32", -- 2
+  x"00000003" when x"33", -- 3
+  x"00000004" when x"34", -- 4
+  x"00000005" when x"35", -- 5
+  x"00000006" when x"36", -- 6
+  x"00000007" when x"37", -- 7
+  x"00000008" when x"38", -- 8
+  x"00000009" when x"39", -- 9
+  x"0000000A" when x"61", -- a
+  x"0000000B" when x"62", -- b
+  x"0000000C" when x"63", -- c
+  x"0000000D" when x"64", -- d
+  x"0000000E" when x"65", -- e
+  x"0000000F" when x"66", -- f
+  s_zero      when others;
+
+-- Select top pushed value (if two values are pushed)
+with inst select s_restop <=
+  top    when x"3a", -- :
+  mid    when x"5c", -- \
+  s_zero when others;
+
+-- Actual outputs
+alu_flags <= s_flags when strmode = '0' else
+             x"0110" when inst /= x"22" else
+             x"0000";
+
+-- Push instruction byte when string mode is on
+resbot <= s_resbot when strmode = '0' else
+          signed(x"000000" & inst);
+
+-- String mode doesn't push top, so this can be unchanged
+restop <= s_restop;
 
 end Behavioral;
