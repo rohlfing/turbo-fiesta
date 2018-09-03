@@ -7,19 +7,19 @@ entity reg_pc is
          reset   : in  std_logic;
          -- Register inputs
          i_state : in  std_logic_vector (19 downto 0);
-         i_addr  : in  std_logic_vector (10 downto 0);
+         i_addr  : in  std_logic_vector (11 downto 0);
          i_flags : in  std_logic_vector (15 downto 0);
          i_sp    : in  std_logic_vector (15 downto 0);
          -- Register outputs
          o_state : out std_logic_vector (19 downto 0);
-         o_addr  : out std_logic_vector (10 downto 0);
+         o_addr  : out std_logic_vector (11 downto 0);
          o_flags : out std_logic_vector (15 downto 0);
          o_sp    : out std_logic_vector (15 downto 0));
 end reg_pc;
 
 architecture Behavioral of reg_pc is
   signal r_state : std_logic_vector(19 downto 0) := x"00000";
-  signal r_addr  : std_logic_vector(10 downto 0) := "00000000000";
+  signal r_addr  : std_logic_vector(11 downto 0) := x"000";
   signal r_flags : std_logic_vector(15 downto 0) := x"0000";
   signal r_sp    : std_logic_vector(15 downto 0) := x"0000";
 begin
@@ -41,7 +41,7 @@ begin
       r_sp    <= i_sp;
     else
       r_state <= x"00000";
-      r_addr  <= "00000000000";
+      r_addr  <= x"000";
       r_flags <= x"0000";
       r_sp    <= x"0000";
     end if;

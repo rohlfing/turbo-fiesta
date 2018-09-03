@@ -28,8 +28,9 @@ s_PC <= prev_PC + dPC when bridge = '0' else
         prev_PC + dPC + dPC;
 
 -- Shouldn't be an issue, but s_range must be greater than 1
-curr_PC <= s_PC - s_range when s_PC >= high else
-           s_PC + s_range when s_PC <  low  else
+curr_PC <= s_PC           when prev_PC >= high else -- do not wrap if already outside
+           s_PC - s_range when s_PC >= high    else
+           s_PC + s_range when s_PC <  low     else
            s_PC;
 
 end behavioral;

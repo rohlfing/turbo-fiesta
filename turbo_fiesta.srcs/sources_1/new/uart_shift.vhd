@@ -5,13 +5,13 @@ use IEEE.numeric_std.ALL;
 use xil_defaultlib.array2D.ALL;
 
 entity uart_shift is
-    generic( LOGN : integer := 10;
-                N : integer := 1024);
-    Port ( clk   : in STD_LOGIC; -- Fast clock (for shifting and timing)
-           w_clk : in STD_LOGIC; -- Shared with IM write-back clock
-           data  : in STD_LOGIC_VECTOR (7 downto 0);
-           w_en  : in STD_LOGIC;
-           uart  : out STD_LOGIC);
+    generic( N : integer := 1024);
+    Port ( clk        : in  std_logic; -- Fast clock (for shifting and timing)
+           w_clk      : in  std_logic; -- Shared with IM write-back clock
+           data       : in  std_logic_vector (7 downto 0);
+           w_en       : in  std_logic;
+           stall_rqst : out std_logic;
+           uart       : out std_logic);
 end uart_shift;
 
 architecture Behavioral of uart_shift is
@@ -81,12 +81,12 @@ begin
 --                  Shift Register! (Note: Shifts bytes, not bits)            --
 --------------------------------------------------------------------------------
 -- Register 0
-s_Q(0) <= r_Q_first;
+s_Q(0)     <= r_Q_first;
+stall_rqst <= '1' when s_Q(1) /= x"00" else '0';
 
 -- Set the data ready flag
 
--- Write data to the first register 
--- TODO ADR Stall if queueue is full
+-- Write data to the first register
 first_reg: process(clk)
 begin
   if(rising_edge(clk)) then

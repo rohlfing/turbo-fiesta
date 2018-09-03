@@ -8,6 +8,8 @@ entity top_level is
              cntdwn_min : unsigned(31 downto 0) := x"00000000");
     port (CLK100MHZ     : in  std_logic;
           reset_in      : in  std_logic;
+          program       : in  std_logic;
+          uart_txd_in   : in  std_logic;
           uart_rxd_out  : out std_logic;
           uart_dbg_out  : out std_logic;
           inst_dbg_out  : out std_logic_vector(7 downto 0);
@@ -21,7 +23,8 @@ architecture Behavioral of top_level is
 --------------------------------------------------------------------------------
 component clk_control
   port(clk       : in  std_logic; -- Clock
-       reset     : in  std_logic; -- Reset pin
+       reset     : in  std_logic; -- Reset 
+       stall     : in  std_logic; -- Stall
        pc_clk    : out std_logic; -- Clock to latch PC output
        fetch_clk : out std_logic; -- Clock for instruction fetch
        alu_clk   : out std_logic; -- Clock for ALU computation
@@ -42,7 +45,7 @@ component pc
        next_PC_y : out signed(7 downto 0); -- PC y output
        next_dx   : out signed(1 downto 0);
        next_dy   : out signed(1 downto 0);
-       o_addr    : out std_logic_vector(10 downto 0));-- 1D mem address
+       o_addr    : out std_logic_vector(11 downto 0));-- 1D mem address
 end component;
 
 COMPONENT im_blk_mem_gen_0
@@ -50,13 +53,13 @@ COMPONENT im_blk_mem_gen_0
     clka  : IN STD_LOGIC;
     ena   : IN STD_LOGIC;
     wea   : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addra : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
     dina  : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
     douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
     clkb  : IN STD_LOGIC;
     enb   : IN STD_LOGIC;
     web   : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-    addrb : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+    addrb : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
     dinb  : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
     doutb : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
   );
@@ -82,20 +85,33 @@ component alu_ex
           mid       : in  signed(31 downto 0);
           top       : in  signed(31 downto 0);
           stdin     : in  signed(31 downto 0);
+          state_in  : in  std_logic_vector(19 downto 0);
+          stall     : out std_logic;
+          state_out : out std_logic_vector(19 downto 0);
           alu_flags : out std_logic_vector(15 downto 0);
           restop    : out signed(31 downto 0);
           resbot    : out signed(31 downto 0);
-          im_addr   : out std_logic_vector(10 downto 0));
+          im_addr   : out std_logic_vector(11 downto 0));
+end component;
+
+component uart_in is
+  generic( N : integer := 64); -- Probably no need for larger buffer
+  Port ( clk        : in  std_logic; -- Fast clock (for shifting and timing)
+         r_clk      : in  std_logic; -- Shared with the stack push clock
+         pop_en     : in  std_logic;
+         uart       : in  std_logic;
+         data       : out std_logic_vector (7 downto 0);
+         stall_rqst : out std_logic);
 end component;
 
 component uart_shift
-    generic( LOGN : integer := 8;
-                N : integer := 256);
-    port ( clk   : in STD_LOGIC;
-           w_clk : in STD_LOGIC;
-           data  : in STD_LOGIC_VECTOR (7 downto 0);
-           w_en  : in STD_LOGIC;
-           uart  : out STD_LOGIC);
+    generic( N : integer := 256);
+    port ( clk        : in  std_logic;
+           w_clk      : in  std_logic;
+           data       : in  std_logic_vector (7 downto 0);
+           w_en       : in  std_logic;
+           stall_rqst : out std_logic;
+           uart       : out std_logic);
 end component;
 
 --------------------------------------------------------------------------------
@@ -106,12 +122,12 @@ component reg_pc
          reset   : in  std_logic;
          -- Register inputs
          i_state : in  std_logic_vector (19 downto 0);
-         i_addr  : in  std_logic_vector (10 downto 0);
+         i_addr  : in  std_logic_vector (11 downto 0);
          i_flags : in  std_logic_vector (15 downto 0);
          i_sp    : in  std_logic_vector (15 downto 0);
          -- Register outputs
          o_state : out std_logic_vector (19 downto 0);
-         o_addr  : out std_logic_vector (10 downto 0);
+         o_addr  : out std_logic_vector (11 downto 0);
          o_flags : out std_logic_vector (15 downto 0);
          o_sp    : out std_logic_vector (15 downto 0));
 end component;
@@ -140,19 +156,20 @@ end component;
 component reg_alu
   port ( clk       : in  std_logic;
          reset     : in  std_logic;
+         program   : in  std_logic;
          -- Register inputs
          i_state   : in  std_logic_vector (19 downto 0);
          i_flags   : in  std_logic_vector (15 downto 0);
          i_restop  : in  std_logic_vector (31 downto 0);
          i_resbot  : in  std_logic_vector (31 downto 0);
-         i_im_addr : in  std_logic_vector (10 downto 0);
+         i_im_addr : in  std_logic_vector (11 downto 0);
          i_sp      : in  std_logic_vector (15 downto 0);
          -- Register outputs
          o_state   : out std_logic_vector (19 downto 0);
          o_flags   : out std_logic_vector (15 downto 0);
          o_restop  : out std_logic_vector (31 downto 0);
          o_resbot  : out std_logic_vector (31 downto 0);
-         o_im_addr : out std_logic_vector (10 downto 0);
+         o_im_addr : out std_logic_vector (11 downto 0);
          o_sp      : out std_logic_vector (15 downto 0));
 end component;
 --------------------------------------------------------------------------------
@@ -164,6 +181,10 @@ signal r_cntdwn  : unsigned(31 downto 0) := x"00000000";
 signal s_cntdwn  : unsigned(31 downto 0);
 
 signal uart_tmp_out : std_logic := '0';
+
+-- Byte from stdin and zero-extended copy
+signal s_stdin     : std_logic_vector(7 downto 0);
+signal s_stdin_ext : signed(31 downto 0);
 
 -- Clock Signals
 signal s_pc_clk    : std_logic;
@@ -184,12 +205,12 @@ signal s_botval  : signed(31 downto 0);
 -- PC Reg
 signal pc_prev_state : std_logic_vector(19 downto 0);
 signal pc_curr_state :           signed(19 downto 0);
-signal pc_curr_addr  : std_logic_vector(10 downto 0);
+signal pc_curr_addr  : std_logic_vector(11 downto 0);
 signal pc_flags      : std_logic_vector(15 downto 0);
 signal pc_sp         : std_logic_vector(15 downto 0);
 -- Fetch Reg
 signal fetch_state       : std_logic_vector(19 downto 0);
-signal fetch_prev_addr   : std_logic_vector(10 downto 0);
+signal fetch_prev_addr   : std_logic_vector(11 downto 0);
 signal fetch_curr_inst   : std_logic_vector( 7 downto 0);
 signal fetch_curr_top    :           signed(31 downto 0);
 signal fetch_curr_mid    :           signed(31 downto 0);
@@ -197,7 +218,8 @@ signal fetch_curr_bot    :           signed(31 downto 0);
 signal fetch_flags       : std_logic_vector(15 downto 0);
 signal fetch_curr_sp     :         unsigned(15 downto 0);
 -- ALU Reg
-signal alu_state        : std_logic_vector(19 downto 0);
+signal alu_prev_state   : std_logic_vector(19 downto 0);
+signal alu_curr_state   : std_logic_vector(19 downto 0);
 signal alu_prev_inst    : std_logic_vector( 7 downto 0);
 signal alu_prev_top     : std_logic_vector(31 downto 0);
 signal alu_prev_mid     : std_logic_vector(31 downto 0);
@@ -206,14 +228,20 @@ signal alu_prev_flags   : std_logic_vector(15 downto 0);
 signal alu_curr_flags   : std_logic_vector(15 downto 0);
 signal alu_curr_restop  :           signed(31 downto 0);
 signal alu_curr_resbot  :           signed(31 downto 0);
-signal alu_curr_im_addr : std_logic_vector(10 downto 0);
+signal alu_curr_im_addr : std_logic_vector(11 downto 0);
 signal alu_sp           : std_logic_vector(15 downto 0);
 -- Write-back stage
-signal wb_im_addr     : std_logic_vector(10 downto 0);
-signal wb_flags       : std_logic_vector(15 downto 0);
-signal wb_prev_sp     : std_logic_vector(15 downto 0);
-signal wb_prev_restop : std_logic_vector(31 downto 0);
-signal wb_prev_resbot : std_logic_vector(31 downto 0);
+signal wb_im_addr      : std_logic_vector(11 downto 0);
+signal wb_flags        : std_logic_vector(15 downto 0);
+signal wb_prev_sp      : std_logic_vector(15 downto 0);
+signal wb_prev_restop  : std_logic_vector(31 downto 0);
+signal wb_prev_resbot  : std_logic_vector(31 downto 0);
+
+-- Stall requests
+signal uart_in_stall_rqst : std_logic;
+signal alu_stall_rqst     : std_logic;
+signal uart_stall_rqst    : std_logic;
+signal s_is_pop           : std_logic;
 
 begin
 
@@ -224,7 +252,7 @@ uart_rxd_out <= uart_tmp_out;
 -- LED defs
 led(3) <= '0'; -- uart_tmp_out;
 led(2) <= '0';
-led(1) <= '0';
+led(1) <= s_stall;
 led(0) <= s_reset;
 
 -- Force instruction memory output to compile (PMOD JB)
@@ -249,10 +277,17 @@ begin
   end if;
 end process reset_cntdwn;
 
+-- Stall by ALU request or on print instruction by UART request
+s_is_pop <= '1' when fetch_curr_inst = x"7E" else '0';
+s_stall  <= (not s_reset) and
+            (alu_stall_rqst or
+             (uart_stall_rqst and s_alu_clk and wb_flags(3)) or
+             (uart_in_stall_rqst and s_fetch_clk and s_is_pop and not alu_prev_flags(4)));
 -- Clock signal generator
 clk_impl: clk_control
   port map(clk       => CLK100MHZ,
            reset     => s_reset,
+           stall     => s_stall,
            pc_clk    => s_pc_clk,
            fetch_clk => s_fetch_clk,
            alu_clk   => s_alu_clk,
@@ -279,7 +314,7 @@ im_impl : im_blk_mem_gen_0
     clka  => CLK100MHZ,
     ena   => '1',
     wea   => "0",
-    addra => fetch_prev_addr(10 downto 0),
+    addra => fetch_prev_addr(11 downto 0),
     dina  => x"00",
     douta => fetch_curr_inst,
     clkb  => CLK100MHZ,
@@ -290,7 +325,7 @@ im_impl : im_blk_mem_gen_0
     doutb => s_get);
 
 -- Stack Memory
-s_botval <= signed(x"000000" & s_get) when (wb_flags(5) = '1') else signed(alu_curr_resbot);--wb_prev_resbot);
+s_botval <= signed(x"000000" & s_get) when (wb_flags(5) = '1') else signed(wb_prev_resbot);
 stack_impl: stack
   port map(clk       => CLK100MHZ,
            w_enable  => s_st_clk,
@@ -303,14 +338,27 @@ stack_impl: stack
            mid       => fetch_curr_mid,
            bot       => fetch_curr_bot);
 
+uart_in_impl: uart_in
+    generic map(N  => 1024)
+    port map(clk        => CLK100MHZ,
+             r_clk      => s_st_clk,
+             pop_en     => alu_curr_flags(6),
+             uart       => uart_txd_in,
+             data       => s_stdin,
+             stall_rqst => uart_in_stall_rqst);
+
 -- ALU and instruction execution
+s_stdin_ext <= signed(x"000000" & s_stdin);
 alu_impl: alu_ex
     port map (inst      => alu_prev_inst,
               strmode   => alu_prev_flags(4),
               bot       => signed(alu_prev_bot),
               mid       => signed(alu_prev_mid),
               top       => signed(alu_prev_top),
-              stdin     => x"00000000", -- TODO ADR stdin?
+              state_in  => alu_prev_state,
+              stall     => alu_stall_rqst,
+              state_out => alu_curr_state,
+              stdin     => s_stdin_ext,
               alu_flags => alu_curr_flags,
               restop    => alu_curr_restop,
               resbot    => alu_curr_resbot,
@@ -318,11 +366,12 @@ alu_impl: alu_ex
 
 output_buff: uart_shift
     generic map(N  => 1024)
-    port map(clk   => CLK100MHZ,
-             w_clk => s_st_clk,
-             data  => wb_prev_resbot(7 downto 0),
-             w_en  => alu_curr_flags(3),
-             uart  => uart_tmp_out);
+    port map(clk        => CLK100MHZ,
+             w_clk      => s_st_clk,
+             data       => wb_prev_resbot(7 downto 0),
+             w_en       => alu_curr_flags(3),
+             stall_rqst => uart_stall_rqst,     
+             uart       => uart_tmp_out);
 
 --------------------------------------------------------------------------------
 -- Register Implementations
@@ -353,7 +402,7 @@ reg_fetch_impl: reg_fetch
             i_flags => fetch_flags,
             i_sp    => std_logic_vector(fetch_curr_sp),
             -- Register outputs
-            o_state => alu_state,
+            o_state => alu_prev_state,
             o_inst  => alu_prev_inst,
             o_top   => alu_prev_top,
             o_mid   => alu_prev_mid,
@@ -364,8 +413,9 @@ reg_fetch_impl: reg_fetch
 reg_alu_impl: reg_alu
   port map (clk       => s_alu_clk,
             reset     => s_reset,
+            program   => program,
             -- Register inputs
-            i_state   => alu_state,
+            i_state   => alu_curr_state,
             i_flags   => alu_curr_flags,
             i_restop  => std_logic_vector(alu_curr_restop),
             i_resbot  => std_logic_vector(alu_curr_resbot),

@@ -17,7 +17,7 @@ entity pc is
        next_PC_y : out signed(7 downto 0); -- PC y output
        next_dx   : out signed(1 downto 0);
        next_dy   : out signed(1 downto 0);
-       o_addr    : out std_logic_vector(10 downto 0));-- 1D mem address
+       o_addr    : out std_logic_vector(11 downto 0));-- 1D mem address
 end pc;
 
 architecture behavioral of pc is
@@ -49,7 +49,7 @@ begin
   next_dx   <= s_dx;
   next_dy   <= s_dy;
   s_addr    <= (s_width*s_PC_y) + (x"00" & s_PC_x);
-  o_addr    <= std_logic_vector(s_addr(10 downto 0));
+  o_addr    <= std_logic_vector(s_addr(11 downto 0));
 
   -- Determine bridge signal
   s_bridge <= alu_flags(2);

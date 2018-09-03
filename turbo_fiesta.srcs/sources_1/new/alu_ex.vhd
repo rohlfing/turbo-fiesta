@@ -10,7 +10,8 @@ use IEEE.NUMERIC_STD.ALL;
 --  3      Write to stdout?
 --  4      String Mode?
 --  5      Push from IM?
---  7-6    Unused
+--  6      Pop from stdin queue?
+--  7      Unused
 --  9-8    # values pushed
 --  11-10  # values popped
 --  13-12  New dy
@@ -23,10 +24,13 @@ entity alu_ex is
         mid       : in  signed(31 downto 0);
         top       : in  signed(31 downto 0);
         stdin     : in  signed(31 downto 0);
+        state_in  : in  std_logic_vector(19 downto 0);
+        stall     : out std_logic;
+        state_out : out std_logic_vector(19 downto 0);
         alu_flags : out std_logic_vector(15 downto 0);
         restop    : out signed(31 downto 0);
         resbot    : out signed(31 downto 0);
-        im_addr   : out std_logic_vector(10 downto 0));
+        im_addr   : out std_logic_vector(11 downto 0));
 end alu_ex;
 
 architecture Behavioral of alu_ex is
@@ -39,17 +43,26 @@ architecture Behavioral of alu_ex is
   signal s_one     : signed(31 downto 0); -- Literally one
   signal s_mul_res : signed(63 downto 0); -- Multiplication result. Lower 32 bits used
   signal s_mul_cut : signed(31 downto 0); -- Lower word of multiply result
-  signal s_mod_res : signed(31 downto 0);
+  signal s_mod_res : signed(31 downto 0); -- Result of modulo operation
+  signal s_div_res : signed(31 downto 0); -- Result of division operation
+  signal s_remul   : signed(63 downto 0); -- Result of (mid / top) * top
   signal s_not_res : signed(31 downto 0); -- 1 if top = 0x0, 0 else
   signal s_gt_res  : signed(31 downto 0); -- 1 if mid > top
   signal s_restop  : signed(31 downto 0); -- Top result if strmode = '0'
   signal s_resbot  : signed(31 downto 0); -- Bot result if strmode = '0'
+  signal s_state   : signed(31 downto 0); -- Zero-padded signed input state
+  signal s_stall   : std_logic;
 
 begin
 
 -- IM address only used for 'g' and 'p' instructions
 s_im_addr <= std_logic_vector(mid(15 downto 0) + (to_signed(80, 8) * top(7 downto 0)));
-im_addr   <= s_im_addr(10 downto 0);
+im_addr   <= s_im_addr(11 downto 0);
+state_out <= state_in                           when strmode = '1' else -- No jumps in string mode
+             x"01900"                           when inst = x"2e"  else -- Jump to number print
+             x"01e00"                           when inst = x"26"  else -- Jump to number scan
+             std_logic_vector(top(19 downto 0)) when inst = x"6a"  else -- Jump to popped state on 'j'
+             state_in;                                                  -- Default is no jump
 
 -- Get flags for conditional redirects
 with top select s_vertf <=
@@ -79,17 +92,16 @@ with inst select s_flags <=
   x"0600" when x"3a", -- :
   x"0A00" when x"5c", -- \
   x"0400" when x"24", -- $
-  -- TODO ADR differentiate outputs
-  x"0408" when x"2e", -- .
+  x"0100" when x"2e", -- . -- Note: this is now a jump
   x"0408" when x"2c", -- ,
   x"0004" when x"23", -- #
   x"0920" when x"67", -- g
   x"0C02" when x"70", -- p
-  -- TODO ADR read from UART in
-  x"0100" when x"26", -- &
-  x"0100" when x"7e", -- ~
+  x"0100" when x"26", -- & -- Note: this is now a jump
+  x"0140" when x"7e", -- ~
   x"0001" when x"40", -- @
   x"0000" when x"20", --' '
+  x"0400" when x"6a", -- j
   x"0100" when others;-- 0, 1, ..., f
 
 -- Compute the longer result expressions here
@@ -99,24 +111,34 @@ s_mul_res <= mid * top;
 s_mul_cut <= s_mul_res(31 downto 0);
 s_not_res <= s_one when top = s_zero else s_zero;
 s_gt_res  <= s_one when mid > top    else s_zero;
-s_mod_res <= to_signed(to_integer(mid) mod to_integer(top), 32);
+s_mod_res <= s_zero when top = s_zero else
+             mid mod top;
+s_div_res <= s_zero when top = s_zero else
+             mid / top;
+s_state   <= signed(x"000" & state_in);
+
+-- Set stall if hard math is happening (also freezes program on divide-by-zero)
+stall <= s_stall when inst = x"2a" or inst = x"2f" or inst = x"25" else
+         '0';
+s_stall <= '1' when (s_remul(31 downto 0) + s_mod_res) /= mid else
+           '0';
+s_remul <= s_div_res * top;
 
 -- Select bottom pushed value (if any values are pushed)
 with inst select s_resbot <=
   mid + top   when x"2b", -- +
   mid - top   when x"2d", -- -
   s_mul_cut   when x"2a", -- *
-  mid / top   when x"2f", -- /
+  s_div_res   when x"2f", -- /
   s_mod_res   when x"25", -- % --mid mod top
   s_not_res   when x"21", -- !
   s_gt_res    when x"60", -- `
   top         when x"3a", -- :
   top         when x"5c", -- \
-  -- TODO ADR differentiate outputs
-  top         when x"2e", -- .
+  s_state     when x"2e", -- . -- Pushes current PC state
   top         when x"2c", -- ,
-  -- TODO ADR read from UART in
-  stdin       when x"26", -- &
+  bot         when x"70", -- p
+  s_state     when x"26", -- & -- Pushes current PC state
   stdin       when x"7e", -- ~
   -- Push literal 0, 1, ..., f
   x"00000000" when x"30", -- 0

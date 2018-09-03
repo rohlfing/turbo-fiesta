@@ -5,6 +5,7 @@ use IEEE.numeric_std.ALL;
 entity clk_control is
   port(clk       : in  std_logic; -- Clock
        reset     : in  std_logic; -- Reset pin
+       stall     : in  std_logic; -- Stall if math isn't done
        pc_clk    : out std_logic; -- Clock for PC
        fetch_clk : out std_logic; -- Clock for instruction fetch
        alu_clk   : out std_logic; -- Clock for ALU computation
@@ -68,6 +69,9 @@ begin
       if (reset = '0' and prev_reset = '1')
       then
         r_count <= "000";
+      elsif (stall = '1')
+      then
+        r_count <= s_count;
       else
         r_count <= s_count + to_unsigned(1, 3);
       end if;
